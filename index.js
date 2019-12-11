@@ -7,7 +7,7 @@ const mime = require('mime-types');
 require('dotenv').config();
 
 const GRAPHQL_URL = 'https://www.demarches-simplifiees.fr/api/v2/graphql';
-const { DEMARCHE_NUMBER, TOKEN } = process.env;
+const { DS_DEMARCHE_NUMBER, DS_API_TOCKEN } = process.env;
 
 const GET_DEMARCHE = `query($demarcheNumber: Int!) {
   demarche(number: $demarcheNumber) {
@@ -94,7 +94,7 @@ async function graphQLRequest(query, variables) {
     method: 'post',
     headers: {
       'content-type': 'application/json',
-      'authorization': `Bearer ${TOKEN}`
+      'authorization': `Bearer ${DS_API_TOCKEN}`
     },
     body: JSON.stringify(body)
   }).then(response => response.json()).catch(error => ({ errors: [error] }));
@@ -129,7 +129,7 @@ async function uploadFile({ url, headers }, filename) {
 
 async function main() {
   const { demarche } = await graphQLRequest(GET_DEMARCHE, {
-    demarcheNumber: parseInt(DEMARCHE_NUMBER)
+    demarcheNumber: parseInt(DS_DEMARCHE_NUMBER)
   });
 
   const [dossier] = demarche.dossiers.nodes;
