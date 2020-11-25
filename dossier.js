@@ -6,27 +6,7 @@ const mime = require('mime-types');
 
 require('dotenv').config();
 
-const { GRAPHQL_URL, DS_DEMARCHE_NUMBER, DS_API_TOCKEN } = process.env;
-
-const GET_DEMARCHE = `query($demarcheNumber: Int!) {
-  demarche(number: $demarcheNumber) {
-    id
-    number
-    groupeInstructeurs {
-      instructeurs {
-        id
-        email
-      }
-    }
-    dossiers(state:en_instruction) {
-      nodes {
-        id
-        number
-        state
-      }
-    }
-  }
-}`;
+const { GRAPHQL_URL, DS_DOSSIER_NUMBER, DS_API_TOCKEN } = process.env;
 
 const GET_DOSSIER = `query($dossierNumber: Int!) {
   dossier(number: $dossierNumber) {
@@ -105,7 +85,7 @@ async function graphQLRequest(query, variables) {
     },
     body: JSON.stringify(body),
   })
-    .then((response) => response.json())
+    .then(async (response) => response.json())
     .catch((error) => ({ errors: [error] }));
 
   if (errors) {
@@ -141,23 +121,17 @@ async function uploadFile({ url, headers }, filename) {
 }
 
 async function main() {
-  const { demarche } = await graphQLRequest(GET_DEMARCHE, {
-    demarcheNumber: parseInt(DS_DEMARCHE_NUMBER),
-  });
-
-  const [dossier] = demarche.dossiers.nodes;
-  const [groupeInstructeur] = demarche.groupeInstructeurs;
-  const [instructeur] = groupeInstructeur.instructeurs;
-
-  console.log('Dossier :', dossier);
-  console.log('Instructeur :', instructeur);
-
   const {
-    dossier: { messages },
+    dossier: {
+      id: dossierId,
+      messages,
+      instructeurs: [instructeur],
+    },
   } = await graphQLRequest(GET_DOSSIER, {
-    dossierNumber: dossier.number,
+    dossierNumber: parseInt(DS_DOSSIER_NUMBER),
   });
 
+  console.log('Instructeur :', instructeur);
   console.log('Messages :', messages);
 
   const fileInfo = getFileInfo('./carte-nationale-identite.jpg');
@@ -167,7 +141,7 @@ async function main() {
   const {
     createDirectUpload: { directUpload },
   } = await graphQLRequest(CREATE_DIRECT_UPLOAD, {
-    dossierId: dossier.id,
+    dossierId,
     ...fileInfo,
   });
 
@@ -178,7 +152,7 @@ async function main() {
   const {
     dossierEnvoyerMessage: { message, errors },
   } = await graphQLRequest(ENVOYER_MESSAGE, {
-    dossierId: dossier.id,
+    dossierId,
     instructeurId: instructeur.id,
     body: 'Bonjour !',
     attachment: directUpload.signedBlobId,
