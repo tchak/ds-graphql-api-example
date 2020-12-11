@@ -6,31 +6,9 @@ const mime = require('mime-types');
 
 require('dotenv').config();
 
-const { GRAPHQL_URL, DS_DOSSIER_NUMBER, DS_API_TOCKEN } = process.env;
+const { GRAPHQL_URL, DS_API_TOCKEN } = process.env;
 
-const FILE = './carte-nationale-identite.jpg';
-
-const GET_DOSSIER = `query($dossierNumber: Int!) {
-  dossier(number: $dossierNumber) {
-    id
-    number
-    instructeurs {
-      id
-      email
-    }
-    messages {
-      email
-      body
-      attachment {
-        filename
-        url
-        byteSize
-        checksum
-        contentType
-      }
-    }
-  }
-}`;
+const FILE = './test.txt';
 
 const CREATE_DIRECT_UPLOAD = `mutation($dossierId: ID!, $filename: String!, $byteSize: Int!, $checksum: String!, $contentType: String!) {
   createDirectUpload(input: {
@@ -114,30 +92,18 @@ function getFileInfo(filename) {
   };
 }
 
-async function uploadFile({ url, headers }, filename) {
-  return fetch(url, {
-    method: 'put',
-    headers: JSON.parse(headers),
-    body: fs.readFileSync(filename),
-  });
-}
-
 async function main() {
-  const { dossier } = await graphQLRequest(GET_DOSSIER, {
-    dossierNumber: parseInt(DS_DOSSIER_NUMBER),
-  });
-  const {
-    id: dossierId,
-    instructeurs: [{ id: instructeurId }],
-  } = dossier;
-
+  const dossierId = 'RG9zc2llci0yMTgzMjc5';
+  const instructeurId = 'SW5zdHJ1Y3RldXItMzEyNjU=';
   console.log('Dossier :', dossierId);
   console.log('Instructeur :', instructeurId);
 
+  // 1. Extraire les metadata du fichier
   const fileInfo = getFileInfo(FILE);
 
   console.log('File Info :', fileInfo);
 
+  // 2. Executer la mutation `createDirectUpload`
   const { createDirectUpload } = await graphQLRequest(CREATE_DIRECT_UPLOAD, {
     dossierId,
     ...fileInfo,
@@ -146,12 +112,18 @@ async function main() {
 
   console.log('Direct Upload :', directUpload);
 
-  await uploadFile(directUpload, FILE);
+  // 3. Uploader le fichier sur l'URL retourné par l'API
+  await fetch(directUpload.url, {
+    method: 'put',
+    headers: JSON.parse(directUpload.headers),
+    body: fs.readFileSync(FILE),
+  });
 
+  // 4. Executer la mutation  `dossierEnvoyerMessage`
   const { dossierEnvoyerMessage } = await graphQLRequest(ENVOYER_MESSAGE, {
     dossierId,
-    instructeurId: instructeur.id,
-    body: 'Bonjour !',
+    instructeurId: instructeurId,
+    body: 'Bonjour !!!',
     attachment: directUpload.signedBlobId,
   });
 
