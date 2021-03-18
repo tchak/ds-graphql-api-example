@@ -6,7 +6,12 @@ const mime = require('mime-types');
 
 require('dotenv').config();
 
-const { GRAPHQL_URL, DS_API_TOCKEN } = process.env;
+const {
+  GRAPHQL_URL,
+  DS_API_TOCKEN,
+  DS_DOSSIER_ID,
+  DS_INSTRUCTEUR_ID,
+} = process.env;
 
 const FILE = './test.txt';
 
@@ -93,8 +98,8 @@ function getFileInfo(filename) {
 }
 
 async function main() {
-  const dossierId = 'RG9zc2llci0yMTgzMjc5';
-  const instructeurId = 'SW5zdHJ1Y3RldXItMzEyNjU=';
+  const dossierId = DS_DOSSIER_ID;
+  const instructeurId = DS_INSTRUCTEUR_ID;
   console.log('Dossier :', dossierId);
   console.log('Instructeur :', instructeurId);
 
